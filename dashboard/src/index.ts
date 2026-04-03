@@ -66,8 +66,15 @@ const app = new Elysia()
           { stdout: 'pipe', stderr: 'pipe', env: gitEnv }).exited
         await Bun.spawn(['git', '-C', '/project', 'commit', '-m', `Save: ${new Date().toISOString()}`],
           { stdout: 'pipe', stderr: 'pipe', env: gitEnv }).exited
-        await Bun.spawn(['git', '-C', '/project', 'push'],
+        await Bun.spawn(['git', '-C', '/project', 'pull', '--rebase'],
           { stdout: 'pipe', stderr: 'pipe', env: gitEnv }).exited
+        const push = Bun.spawn(['git', '-C', '/project', 'push'],
+          { stdout: 'pipe', stderr: 'pipe', env: gitEnv })
+        await push.exited
+        if (push.exitCode !== 0) {
+          await Bun.spawn(['git', '-C', '/project', 'push', '--force'],
+            { stdout: 'pipe', stderr: 'pipe', env: gitEnv }).exited
+        }
       } catch {}
     }
 
