@@ -181,3 +181,25 @@ const app = new Elysia()
   .listen(3000, () => {
     console.log('Dashboard disponible sur http://localhost:3000')
   })
+
+// Git pull au démarrage pour récupérer la dernière save
+const gitToken = process.env.GITHUB_TOKEN
+const gitRepoUrl = process.env.GIT_REPO_URL
+if (gitToken && gitRepoUrl) {
+  const gitEnv = {
+    ...process.env,
+    GIT_AUTHOR_NAME: 'MC Server',
+    GIT_AUTHOR_EMAIL: 'mc@server.local',
+    GIT_COMMITTER_NAME: 'MC Server',
+    GIT_COMMITTER_EMAIL: 'mc@server.local',
+    GIT_TERMINAL_PROMPT: '0',
+    GIT_ASKPASS: 'echo',
+  }
+  const repoWithToken = gitRepoUrl.replace('https://', `https://${gitToken}@`)
+  await Bun.spawn(['git', '-C', '/project', 'remote', 'set-url', 'origin', repoWithToken],
+    { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
+  console.log('[dashboard] git pull au démarrage...')
+  await Bun.spawn(['git', '-C', '/project', 'pull', '--rebase'],
+    { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
+  console.log('[dashboard] Pull terminé ✓')
+}
