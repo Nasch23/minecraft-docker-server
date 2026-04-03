@@ -1,0 +1,60 @@
+services:
+  minecraft:
+    image: itzg/minecraft-server
+    container_name: mc-serveur
+
+    ports:
+      - "${PORT}:25565"
+
+    environment:
+      EULA: "TRUE"
+      VERSION: "${MC_VERSION}"
+      TYPE: "${MC_TYPE}"
+      MEMORY: "${RAM}"
+      MOTD: "${MOTD}"
+      GAMEMODE: "${GAMEMODE}"
+      DIFFICULTY: "${DIFFICULTY}"
+      MAX_PLAYERS: "${MAX_PLAYERS}"
+      ENABLE_RCON: "true"
+      RCON_PASSWORD: "${RCON_PASSWORD}"
+      RCON_PORT: "25575"
+
+    volumes:
+      - ./data:/data
+
+    stop_grace_period: 60s
+    restart: unless-stopped
+
+  dashboard:
+    build: ./dashboard
+    container_name: mc-dashboard
+    ports:
+      - "3000:3000"
+    environment:
+      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      GIST_ID: "${GIST_ID}"
+      GIT_REPO_URL: "${GIT_REPO_URL}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/project
+    restart: unless-stopped
+
+  backup:
+    image: itzg/mc-backup
+    container_name: mc-backup
+    depends_on:
+      - minecraft
+
+    environment:
+      BACKUP_INTERVAL: "1h"
+      PRUNE_BACKUPS_DAYS: "7"
+      INITIAL_DELAY: "2m"
+      RCON_HOST: minecraft
+      RCON_PORT: "25575"
+      RCON_PASSWORD: "${RCON_PASSWORD}"
+
+    volumes:
+      - ./data:/data:ro
+      - ./backups:/backups
+
+    restart: unless-stopped

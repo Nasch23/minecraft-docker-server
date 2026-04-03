@@ -1,0 +1,11 @@
+.env
+dashboard/node_modules/
+data/logs/
+data/crash-reports/
+data/debug/
+data/*.jar
+backups/
+playit.toml
+launcher.exe
+launcher.ps1
+*.old.exe
