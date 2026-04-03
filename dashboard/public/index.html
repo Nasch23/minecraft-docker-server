@@ -292,6 +292,8 @@
   const btnSend     = document.getElementById('btn-send')
 
   let isRunning = false
+  let isStopping = false
+  let isTransitioning = false
   let autoScroll = true
   let ws = null
   let wsReconnectTimer = null
@@ -350,14 +352,14 @@
     statusBadge.className = 'status-badge ' + (running ? 'online' : 'offline')
     statusText.textContent  = running ? 'EN LIGNE' : 'HORS LIGNE'
 
-    btnStart.disabled = running
-    btnStop.disabled  = !running
+    btnStart.disabled = running  || isTransitioning
+    btnStop.disabled  = !running || isTransitioning
     consoleInput.disabled = !running
     btnSend.disabled      = !running
 
     if (running) {
       connectWS()
-    } else {
+    } else if (!isStopping) {
       disconnectWS()
     }
   }
@@ -388,29 +390,34 @@
 
   // ── Actions ───────────────────────────────────────────────────
   async function startServer() {
+    if (isTransitioning) return
+    isTransitioning = true
     btnStart.disabled = true
+    btnStop.disabled  = true
     btnStart.innerHTML = '<span class="spin"></span>'
     const r = await fetch('/api/start', { method: 'POST' })
     const { success } = await r.json()
+    isTransitioning = false
     btnStart.innerHTML = '▶ START'
-    if (!success) {
-      btnStart.disabled = false
-      appendLog('[dashboard] Échec du démarrage.')
-    }
+    if (!success) appendLog('[dashboard] Échec du démarrage.')
     await fetchStatus()
   }
 
   async function stopServer() {
-    btnStop.disabled = true
+    if (isTransitioning) return
+    isTransitioning = true
+    isStopping = true
+    btnStop.disabled  = true
+    btnStart.disabled = true
     btnStop.innerHTML = '<span class="spin"></span>'
     appendLog('[dashboard] Arrêt en cours (save-all + stop)...')
     const r = await fetch('/api/stop', { method: 'POST' })
     const { success } = await r.json()
+    isTransitioning = false
+    isStopping = false
     btnStop.innerHTML = '■ STOP'
-    if (!success) {
-      btnStop.disabled = false
-      appendLog('[dashboard] Échec de l\'arrêt.')
-    }
+    if (!success) appendLog('[dashboard] Échec de l\'arrêt.')
+    disconnectWS()
     await fetchStatus()
   }
 

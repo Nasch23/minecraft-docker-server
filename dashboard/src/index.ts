@@ -6,6 +6,13 @@ const stripAnsi = (str: string) => str.replace(ANSI_REGEX, '')
 
 let wsIdCounter = 0
 const logProcs = new Map<number, ReturnType<typeof Bun.spawn>>()
+const wsClients = new Set<any>()
+
+function broadcast(msg: string) {
+  for (const ws of wsClients) {
+    try { ws.send(msg) } catch {}
+  }
+}
 
 const app = new Elysia()
   .use(staticPlugin({ assets: 'public', prefix: '/' }))
@@ -51,6 +58,7 @@ const app = new Elysia()
     const gitToken = process.env.GITHUB_TOKEN
     const gitRepoUrl = process.env.GIT_REPO_URL
     if (gitToken && gitRepoUrl) {
+      broadcast('[dashboard] Sauvegarde GitHub en cours...')
       try {
         const gitEnv = {
           ...process.env,
@@ -58,41 +66,52 @@ const app = new Elysia()
           GIT_AUTHOR_EMAIL: 'mc@server.local',
           GIT_COMMITTER_NAME: 'MC Server',
           GIT_COMMITTER_EMAIL: 'mc@server.local',
+          GIT_TERMINAL_PROMPT: '0',
+          GIT_ASKPASS: 'echo',
         }
         const repoWithToken = gitRepoUrl.replace('https://', `https://${gitToken}@`)
         await Bun.spawn(['git', '-C', '/project', 'remote', 'set-url', 'origin', repoWithToken],
           { stdout: 'pipe', stderr: 'pipe', env: gitEnv }).exited
+        broadcast('[dashboard] git add...')
         await Bun.spawn(['git', '-C', '/project', 'add', 'data/'],
           { stdout: 'pipe', stderr: 'pipe', env: gitEnv }).exited
+        broadcast('[dashboard] git commit...')
         await Bun.spawn(['git', '-C', '/project', 'commit', '-m', `Save: ${new Date().toISOString()}`],
           { stdout: 'pipe', stderr: 'pipe', env: gitEnv }).exited
+        broadcast('[dashboard] git pull --rebase...')
         await Bun.spawn(['git', '-C', '/project', 'pull', '--rebase'],
           { stdout: 'pipe', stderr: 'pipe', env: gitEnv }).exited
+        broadcast('[dashboard] git push...')
         const push = Bun.spawn(['git', '-C', '/project', 'push'],
           { stdout: 'pipe', stderr: 'pipe', env: gitEnv })
         await push.exited
         if (push.exitCode !== 0) {
+          broadcast('[dashboard] git push --force...')
           await Bun.spawn(['git', '-C', '/project', 'push', '--force'],
             { stdout: 'pipe', stderr: 'pipe', env: gitEnv }).exited
         }
-      } catch {}
+        broadcast('[dashboard] Sauvegarde poussée sur GitHub ✓')
+      } catch (e: any) {
+        broadcast(`[dashboard] Erreur sauvegarde GitHub: ${e?.message ?? e}`)
+      }
     }
 
     // Reset du statut sur le Gist
+    const token = process.env.GITHUB_TOKEN
     const gistId = process.env.GIST_ID
-    if (gitToken && gistId) {
+    if (token && gistId) {
       try {
         await fetch(`https://api.github.com/gists/${gistId}`, {
           method: 'PATCH',
           headers: {
-            Authorization: `token ${gitToken}`,
+            Authorization: `token ${token}`,
             'User-Agent': 'MC-Dashboard',
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             files: {
               'mc-status.json': {
-                content: JSON.stringify({ running: false, hostName: '', since: '' }),
+                content: JSON.stringify({ running: false, host: '', since: '' }),
               },
             },
           }),
@@ -119,6 +138,7 @@ const app = new Elysia()
 
   .ws('/ws/logs', {
     open(ws) {
+      wsClients.add(ws)
       const id = wsIdCounter++
       ;(ws as any)._wsId = id
 
@@ -137,7 +157,9 @@ const app = new Elysia()
             if (done) break
             const text = stripAnsi(decoder.decode(value))
             if (text.trim()) {
-              try { ws.send(text) } catch {}
+              try {
+                ws.send(text)
+              } catch {}
             }
           }
         } catch {}
@@ -147,6 +169,7 @@ const app = new Elysia()
       stream(proc.stderr)
     },
     close(ws) {
+      wsClients.delete(ws)
       const id = (ws as any)._wsId
       if (id !== undefined) {
         logProcs.get(id)?.kill()

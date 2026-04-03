@@ -183,6 +183,23 @@ if ($playitSecret -and (Test-Path $playitExe)) {
     Set-Status "Connexion du tunnel..." "Lancement de Playit.gg" 75
     "secret_key = `"$playitSecret`"" | Set-Content "$exeDir\playit.toml"
     Start-Process $playitExe -WorkingDirectory $exeDir -WindowStyle Hidden
+
+    # Watchdog : kill playit.exe quand le serveur s'arrête
+    $watchdog = @'
+while ($true) {
+    Start-Sleep 15
+    try {
+        $r = Invoke-WebRequest -Uri "http://localhost:3000/api/status" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+        $status = $r.Content | ConvertFrom-Json
+        if (-not $status.running) {
+            Get-Process -Name "playit" -ErrorAction SilentlyContinue | Stop-Process -Force
+            break
+        }
+    } catch {}
+}
+'@
+    $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($watchdog))
+    Start-Process powershell -WindowStyle Hidden -ArgumentList "-NoProfile", "-EncodedCommand", $encoded
 }
 
 # ── Gist ─────────────────────────────────────────────────────────

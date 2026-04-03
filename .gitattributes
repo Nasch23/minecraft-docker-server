@@ -1,0 +1,7 @@
+data/world/**        binary
+data/world_nether/** binary
+data/world_the_end/**binary
+*.mca                binary
+*.dat                binary
+*.nbt                binary
+*.dat_old            binary
