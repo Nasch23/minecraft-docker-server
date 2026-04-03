@@ -71,24 +71,24 @@ const app = new Elysia()
         }
         const repoWithToken = gitRepoUrl.replace('https://', `https://${gitToken}@`)
         await Bun.spawn(['git', '-C', '/project', 'remote', 'set-url', 'origin', repoWithToken],
-          { stdout: 'pipe', stderr: 'pipe', env: gitEnv }).exited
+          { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
         broadcast('[dashboard] git add...')
         await Bun.spawn(['git', '-C', '/project', 'add', 'data/'],
-          { stdout: 'pipe', stderr: 'pipe', env: gitEnv }).exited
+          { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
         broadcast('[dashboard] git commit...')
         await Bun.spawn(['git', '-C', '/project', 'commit', '-m', `Save: ${new Date().toISOString()}`],
-          { stdout: 'pipe', stderr: 'pipe', env: gitEnv }).exited
+          { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
         broadcast('[dashboard] git pull --rebase...')
         await Bun.spawn(['git', '-C', '/project', 'pull', '--rebase'],
-          { stdout: 'pipe', stderr: 'pipe', env: gitEnv }).exited
+          { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
         broadcast('[dashboard] git push...')
         const push = Bun.spawn(['git', '-C', '/project', 'push'],
-          { stdout: 'pipe', stderr: 'pipe', env: gitEnv })
+          { stdout: 'ignore', stderr: 'ignore', env: gitEnv })
         await push.exited
         if (push.exitCode !== 0) {
           broadcast('[dashboard] git push --force...')
           await Bun.spawn(['git', '-C', '/project', 'push', '--force'],
-            { stdout: 'pipe', stderr: 'pipe', env: gitEnv }).exited
+            { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
         }
         broadcast('[dashboard] Sauvegarde poussée sur GitHub ✓')
       } catch (e: any) {
