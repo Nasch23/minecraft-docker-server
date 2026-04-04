@@ -5,6 +5,7 @@ const ANSI_REGEX = /\x1b\[[0-9;]*[mGKHFJA-Z]/g
 const stripAnsi = (str: string) => str.replace(ANSI_REGEX, '')
 
 let wsIdCounter = 0
+let stopInProgress = false
 const logProcs = new Map<number, ReturnType<typeof Bun.spawn>>()
 const wsClients = new Set<any>()
 
@@ -135,6 +136,8 @@ new Elysia()
   })
 
   .post('/api/stop', async () => {
+    if (stopInProgress) return { success: false }
+    stopInProgress = true
     try {
       await Bun.spawn(['docker', 'exec', 'mc-serveur', 'rcon-cli', 'save-all'], {
         stdout: 'pipe',
@@ -151,6 +154,7 @@ new Elysia()
     await pushSaveToGitHub()
     await resetGistStatus()
 
+    stopInProgress = false
     return { success: proc.exitCode === 0 }
   })
 
