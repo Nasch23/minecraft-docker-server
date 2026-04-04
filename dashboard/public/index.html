@@ -418,6 +418,7 @@
     btnStop.innerHTML = '■ STOP'
     if (!success) appendLog('[dashboard] Échec de l\'arrêt.')
     disconnectWS()
+    isRunning = null
     await fetchStatus()
   }
 
