@@ -84,7 +84,7 @@ async function resetGistStatus() {
 // Watchdog : surveille les crash du container et déclenche une sauvegarde
 async function startWatchdog() {
   const proc = Bun.spawn(
-    ['docker', 'events', '--filter', 'container=mc-serveur', '--filter', 'event=die', '--format', '{{.Status}}'],
+    ['docker', 'events', '--filter', 'container=mc-serveur', '--filter', 'event=die', '--format', '{{.Actor.Attributes.exitCode}}'],
     { stdout: 'pipe', stderr: 'ignore' }
   )
   const reader = proc.stdout.getReader()
@@ -95,9 +95,8 @@ async function startWatchdog() {
       if (done) break
       const text = decoder.decode(value).trim()
       if (!text) continue
-      // Vérifie si c'est un crash (exit code != 0) ou un arrêt normal
-      const exitCodeMatch = text.match(/exitCode=(\d+)/) || []
-      const exitCode = exitCodeMatch[1] ? parseInt(exitCodeMatch[1]) : -1
+      if (stopInProgress) continue // arrêt normal via dashboard, pas un crash
+      const exitCode = parseInt(text) || 0
       if (exitCode !== 0) {
         broadcast('[dashboard] Crash détecté ! Sauvegarde automatique...')
         await pushSaveToGitHub()
@@ -105,7 +104,6 @@ async function startWatchdog() {
       }
     }
   } catch {}
-  // Relance le watchdog si le process se termine
   setTimeout(startWatchdog, 3000)
 }
 
