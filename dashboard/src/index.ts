@@ -40,18 +40,9 @@ async function pushSaveToGitHub() {
     broadcast('[dashboard] git commit...')
     await Bun.spawn(['git', '-C', '/project', 'commit', '-m', `Save: ${new Date().toISOString()}`],
       { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
-    broadcast('[dashboard] git pull --rebase...')
-    await Bun.spawn(['git', '-C', '/project', 'pull', '--rebase'],
-      { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
     broadcast('[dashboard] git push...')
-    const push = Bun.spawn(['git', '-C', '/project', 'push'],
-      { stdout: 'ignore', stderr: 'ignore', env: gitEnv })
-    await push.exited
-    if (push.exitCode !== 0) {
-      broadcast('[dashboard] git push --force...')
-      await Bun.spawn(['git', '-C', '/project', 'push', '--force'],
-        { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
-    }
+    await Bun.spawn(['git', '-C', '/project', 'push', '--force'],
+      { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
     broadcast('[dashboard] Sauvegarde poussée sur GitHub ✓')
   } catch (e: any) {
     broadcast(`[dashboard] Erreur sauvegarde GitHub: ${e?.message ?? e}`)
@@ -233,7 +224,9 @@ if (gitToken && gitRepoUrl) {
   await Bun.spawn(['git', '-C', '/project', 'remote', 'set-url', 'origin', repoWithToken],
     { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
   console.log('[dashboard] git pull au démarrage...')
-  await Bun.spawn(['git', '-C', '/project', 'pull', '--rebase'],
+  await Bun.spawn(['git', '-C', '/project', 'checkout', '--', 'data/'],
+    { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
+  await Bun.spawn(['git', '-C', '/project', 'pull'],
     { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
   console.log('[dashboard] Pull terminé ✓')
 }
