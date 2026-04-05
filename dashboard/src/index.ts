@@ -230,6 +230,8 @@ if (gitToken && gitRepoUrl) {
   const repoWithToken = gitRepoUrl.replace('https://', `https://${gitToken}@`)
   await Bun.spawn(['git', '-C', '/project', 'remote', 'set-url', 'origin', repoWithToken],
     { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
+  await Bun.spawn(['git', 'lfs', 'install'],
+    { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
   console.log('[dashboard] git pull au démarrage...')
   await Bun.spawn(['git', '-C', '/project', 'fetch', 'origin'],
     { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
