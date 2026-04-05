@@ -35,7 +35,7 @@ async function pushSaveToGitHub() {
     await Bun.spawn(['git', '-C', '/project', 'remote', 'set-url', 'origin', repoWithToken],
       { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
     broadcast('[dashboard] git add...')
-    await Bun.spawn(['git', '-C', '/project', 'add', 'data/'],
+    await Bun.spawn(['git', '-C', '/project', 'add', '-A'],
       { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
     broadcast('[dashboard] git commit...')
     // Orphan commit : écrase l'historique, repo toujours petit
@@ -231,9 +231,9 @@ if (gitToken && gitRepoUrl) {
   await Bun.spawn(['git', '-C', '/project', 'remote', 'set-url', 'origin', repoWithToken],
     { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
   console.log('[dashboard] git pull au démarrage...')
-  await Bun.spawn(['git', '-C', '/project', 'checkout', '--', 'data/'],
+  await Bun.spawn(['git', '-C', '/project', 'fetch', 'origin'],
     { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
-  await Bun.spawn(['git', '-C', '/project', 'pull'],
+  await Bun.spawn(['git', '-C', '/project', 'reset', '--hard', 'origin/master'],
     { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
   console.log('[dashboard] Pull terminé ✓')
 }

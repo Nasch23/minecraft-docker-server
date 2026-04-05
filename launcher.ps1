@@ -159,7 +159,7 @@ Set-Status "Lancement du serveur..." "Démarrage des containers Docker" 45
 Set-Location $exeDir
 $composeOk = $false
 for ($i = 0; $i -lt 30; $i++) {
-    $composeResult = & docker compose up -d 2>&1
+    $composeResult = & docker compose up -d --build 2>&1
     if ($LASTEXITCODE -eq 0) { $composeOk = $true; break }
     Set-Status "Lancement du serveur..." "En attente du moteur Docker... ($($i+1)/30)" (45 + [int]($i * 5 / 30))
     Start-Sleep 2
