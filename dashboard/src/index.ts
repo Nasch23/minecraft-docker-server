@@ -38,7 +38,14 @@ async function pushSaveToGitHub() {
     await Bun.spawn(['git', '-C', '/project', 'add', 'data/'],
       { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
     broadcast('[dashboard] git commit...')
+    // Orphan commit : écrase l'historique, repo toujours petit
+    await Bun.spawn(['git', '-C', '/project', 'checkout', '--orphan', 'save_tmp'],
+      { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
     await Bun.spawn(['git', '-C', '/project', 'commit', '-m', `Save: ${new Date().toISOString()}`],
+      { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
+    await Bun.spawn(['git', '-C', '/project', 'branch', '-D', 'master'],
+      { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
+    await Bun.spawn(['git', '-C', '/project', 'branch', '-m', 'master'],
       { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
     broadcast('[dashboard] git push...')
     await Bun.spawn(['git', '-C', '/project', 'push', '--force'],
