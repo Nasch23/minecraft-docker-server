@@ -6,6 +6,7 @@ const stripAnsi = (str: string) => str.replace(ANSI_REGEX, '')
 
 let wsIdCounter = 0
 let stopInProgress = false
+let saveInProgress = false
 const logProcs = new Map<number, ReturnType<typeof Bun.spawn>>()
 const wsClients = new Set<any>()
 
@@ -16,9 +17,11 @@ function broadcast(msg: string) {
 }
 
 async function pushSaveToGitHub() {
+  if (saveInProgress) return
+  saveInProgress = true
   const gitToken = process.env.GITHUB_TOKEN
   const gitRepoUrl = process.env.GIT_REPO_URL
-  if (!gitToken || !gitRepoUrl) return
+  if (!gitToken || !gitRepoUrl) { saveInProgress = false; return }
 
   broadcast('[dashboard] Sauvegarde GitHub en cours...')
   try {
@@ -54,6 +57,7 @@ async function pushSaveToGitHub() {
   } catch (e: any) {
     broadcast(`[dashboard] Erreur sauvegarde GitHub: ${e?.message ?? e}`)
   }
+  saveInProgress = false
 }
 
 async function resetGistStatus() {
@@ -81,8 +85,9 @@ async function resetGistStatus() {
 
 // Watchdog : surveille les crash du container et déclenche une sauvegarde
 async function startWatchdog() {
+  const since = Math.floor(Date.now() / 1000).toString()
   const proc = Bun.spawn(
-    ['docker', 'events', '--filter', 'container=mc-serveur', '--filter', 'event=die', '--format', '{{.Actor.Attributes.exitCode}}'],
+    ['docker', 'events', '--since', since, '--filter', 'container=mc-serveur', '--filter', 'event=die', '--format', '{{.Actor.Attributes.exitCode}}'],
     { stdout: 'pipe', stderr: 'ignore' }
   )
   const reader = proc.stdout.getReader()
@@ -229,8 +234,6 @@ if (gitToken && gitRepoUrl) {
   }
   const repoWithToken = gitRepoUrl.replace('https://', `https://${gitToken}@`)
   await Bun.spawn(['git', '-C', '/project', 'remote', 'set-url', 'origin', repoWithToken],
-    { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
-  await Bun.spawn(['git', 'lfs', 'install'],
     { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
   console.log('[dashboard] git pull au démarrage...')
   await Bun.spawn(['git', '-C', '/project', 'fetch', 'origin'],
