@@ -251,6 +251,8 @@ if (gitToken && gitRepoUrl) {
     { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
   await Bun.spawn(['git', '-C', '/project', 'reset', '--hard', 'origin/master'],
     { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
+  await Bun.spawn(['chmod', '-R', '777', '/project/data'],
+    { stdout: 'ignore', stderr: 'ignore' }).exited
   console.log('[dashboard] Pull terminé ✓')
 }
 
