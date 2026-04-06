@@ -41,6 +41,9 @@ async function pushSaveToGitHub() {
     await Bun.spawn(['git', '-C', '/project', 'add', '-A'],
       { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
     broadcast('[dashboard] git commit...')
+    // Nettoyage au cas où save_tmp existe déjà
+    await Bun.spawn(['git', '-C', '/project', 'branch', '-D', 'save_tmp'],
+      { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
     // Orphan commit sur branche tmp, puis on écrase master atomiquement
     await Bun.spawn(['git', '-C', '/project', 'checkout', '--orphan', 'save_tmp'],
       { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
