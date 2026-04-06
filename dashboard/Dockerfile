@@ -1,6 +1,6 @@
 FROM oven/bun:1-alpine
 
-RUN apk add --no-cache docker-cli git git-lfs && git lfs install --system
+RUN apk add --no-cache docker-cli git
 
 WORKDIR /app
 
