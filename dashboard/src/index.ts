@@ -41,14 +41,17 @@ async function pushSaveToGitHub() {
     await Bun.spawn(['git', '-C', '/project', 'add', '-A'],
       { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
     broadcast('[dashboard] git commit...')
-    // Orphan commit : écrase l'historique, repo toujours petit
+    // Orphan commit sur branche tmp, puis on écrase master atomiquement
     await Bun.spawn(['git', '-C', '/project', 'checkout', '--orphan', 'save_tmp'],
       { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
     await Bun.spawn(['git', '-C', '/project', 'commit', '-m', `Save: ${new Date().toISOString()}`],
       { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
-    await Bun.spawn(['git', '-C', '/project', 'branch', '-D', 'master'],
+    // Remplace master seulement si save_tmp est prêt
+    await Bun.spawn(['git', '-C', '/project', 'branch', '-f', 'master', 'save_tmp'],
       { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
-    await Bun.spawn(['git', '-C', '/project', 'branch', '-m', 'master'],
+    await Bun.spawn(['git', '-C', '/project', 'checkout', 'master'],
+      { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
+    await Bun.spawn(['git', '-C', '/project', 'branch', '-D', 'save_tmp'],
       { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
     broadcast('[dashboard] git push...')
     await Bun.spawn(['git', '-C', '/project', 'push', '--force'],
@@ -234,6 +237,11 @@ if (gitToken && gitRepoUrl) {
   }
   const repoWithToken = gitRepoUrl.replace('https://', `https://${gitToken}@`)
   await Bun.spawn(['git', '-C', '/project', 'remote', 'set-url', 'origin', repoWithToken],
+    { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
+  // Config permanente : désactive le suivi des permissions + active LFS
+  await Bun.spawn(['git', '-C', '/project', 'config', 'core.fileMode', 'false'],
+    { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
+  await Bun.spawn(['git', 'lfs', 'install'],
     { stdout: 'ignore', stderr: 'ignore', env: gitEnv }).exited
   console.log('[dashboard] git pull au démarrage...')
   await Bun.spawn(['git', '-C', '/project', 'fetch', 'origin'],
